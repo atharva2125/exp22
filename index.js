@@ -14,14 +14,75 @@ const products = [
 // Middleware to parse JSON bodies
 app.use(express.json());
 
+// HTML template function
+const htmlTemplate = (content) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .product {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .product h2 {
+            margin-top: 0;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    ${content}
+</body>
+</html>
+`;
+
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the Product Management API' });
+  const content = `
+    <h1>Welcome to the Product Management API</h1>
+    <p>Use the following endpoints:</p>
+    <ul>
+        <li>/products - Get all products</li>
+        <li>/products/:id - Get a specific product</li>
+        <li>/search - Search for products</li>
+    </ul>
+  `;
+  res.send(htmlTemplate(content));
 });
 
 // GET all products
 app.get('/products', (req, res) => {
-  res.json(products);
+  const productsHtml = products.map(p => `
+    <div class="product">
+        <h2>${p.name}</h2>
+        <p>Category: ${p.category}</p>
+        <p>Price: $${p.price.toFixed(2)}</p>
+    </div>
+  `).join('');
+  
+  const content = `
+    <h1>All Products</h1>
+    ${productsHtml}
+  `;
+  
+  res.send(htmlTemplate(content));
 });
 
 // GET product by ID
@@ -30,9 +91,17 @@ app.get('/products/:id', (req, res) => {
   const product = products.find(p => p.id === id);
   
   if (product) {
-    res.json(product);
+    const content = `
+      <h1>Product Details</h1>
+      <div class="product">
+        <h2>${product.name}</h2>
+        <p>Category: ${product.category}</p>
+        <p>Price: $${product.price.toFixed(2)}</p>
+      </div>
+    `;
+    res.send(htmlTemplate(content));
   } else {
-    res.status(404).json({ message: 'Product not found' });
+    res.status(404).send(htmlTemplate('<h1>Product not found</h1>'));
   }
 });
 
@@ -46,33 +115,43 @@ app.get('/search', (req, res) => {
       p.name.toLowerCase().includes(name.toLowerCase())
     );
   }
-
   if (category) {
     filteredProducts = filteredProducts.filter(p => 
       p.category.toLowerCase() === category.toLowerCase()
     );
   }
-
   if (minPrice) {
     filteredProducts = filteredProducts.filter(p => p.price >= parseFloat(minPrice));
   }
-
   if (maxPrice) {
     filteredProducts = filteredProducts.filter(p => p.price <= parseFloat(maxPrice));
   }
 
-  res.json(filteredProducts);
+  const productsHtml = filteredProducts.map(p => `
+    <div class="product">
+        <h2>${p.name}</h2>
+        <p>Category: ${p.category}</p>
+        <p>Price: $${p.price.toFixed(2)}</p>
+    </div>
+  `).join('');
+  
+  const content = `
+    <h1>Search Results</h1>
+    ${productsHtml || '<p>No products found matching your criteria.</p>'}
+  `;
+  
+  res.send(htmlTemplate(content));
 });
 
 // Handle 404 errors
 app.use((req, res, next) => {
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).send(htmlTemplate('<h1>404 - Route not found</h1>'));
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  res.status(500).send(htmlTemplate('<h1>500 - Something went wrong!</h1>'));
 });
 
 // Start the server
